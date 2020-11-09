@@ -10,7 +10,7 @@ def response(flow: http.HTTPFlow) -> None:
             if flow.response.content:
                 resp = flow.response.content
                 jsonResp = json.loads(resp)
-                respFormatted = json.dumps(jsonResp, indent=4, separators=(", ", ":"))
+                respFormatted = json.dumps(jsonResp, indent=4, separators=(",", ":"))
                 ofile.write(respFormatted)
 
             # Add other separators etc. however you want
