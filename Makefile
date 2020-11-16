@@ -1,6 +1,6 @@
 PYTHON = python3
 
-.PHONY = help download-master download-raw test clean process-join-dates
+.PHONY = help download-master download-raw test clean process-join-dates process-datetimes
 .DEFAULT_GOAL = help
 
 current_dir = $(shell pwd)
@@ -15,7 +15,8 @@ setup:
 help:
 	@echo "---------------HELP-----------------"
 	@echo "To download necessary data type make download-master"
-	@echo "To add app download dates for students and stores make process-join-dates"
+	@echo "To add app download dates for students and stores make process-join-datetime"
+	@echo "To add detailed date and time order information make process-datetimes"
 	@echo "To test the project type make test"
 	@echo "------------------------------------"
 
@@ -35,6 +36,11 @@ process-join-dates: download-master
 
 	[ -f ${current_dir}/data/bigfiles/student_join_date.txt ] || python3 data/join_dates.py
 	[ -f ${current_dir}/data/bigfiles/store_join_date.txt ] || python3 data/join_dates.py
+
+# process dates
+process-datetimes: download-master
+
+	[ -f ${current_dir}/data/bigfiles/datetime.txt ] || python3 data/transform_times.py
 
 
 # run all tests
