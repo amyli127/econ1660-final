@@ -30,10 +30,11 @@ download-master: setup
 download-raw:
 	# TODO
 
-# process join dates for students
+# process join dates for students and stores
 process-join-dates: download-master
 
-	[ -f ${current_dir}/data/bigfiles/student_join_date.txt ] || python3 data/add_attributes.py
+	[ -f ${current_dir}/data/bigfiles/student_join_date.txt ] || python3 data/join_dates.py
+	[ -f ${current_dir}/data/bigfiles/store_join_date.txt ] || python3 data/join_dates.py
 
 
 # run all tests
