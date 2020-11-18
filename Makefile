@@ -1,10 +1,7 @@
 PYTHON = python3
 
-<<<<<<< HEAD
-.PHONY = help download-master download-raw test clean process-order-counts
-=======
-.PHONY = help download-master download-raw test clean process-join-dates process-datetimes
->>>>>>> 7ab3d8332e5c76f5aa0b5b541acd508c5a5b66d6
+.PHONY = help download-master download-raw test clean process-order-counts process-join-dates process-datetimes
+
 .DEFAULT_GOAL = help
 
 current_dir = $(shell pwd)
