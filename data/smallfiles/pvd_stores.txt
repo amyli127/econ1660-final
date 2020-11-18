@@ -1,0 +1,31 @@
+_id,name
+5b4a618f326bd9777aa5dc1d,Heng Thai and Rotisserie
+5f904409b50afc00aa63dffe,Haven Brothers Diner
+5b4a618f326bd9777aa5dca0,Wong's Kitchen
+5b4a618f326bd9777aa5dc34,Bajas Taqueria
+5f64f9338a9a0700e326919e,Ten One Tea House (216 Thayer St)
+5db0a59a162fc60099d57b7d,Ben & Jerry's (Thayer St.)
+5b4a618f326bd9777aa5dc9f,Vivi Bubble Tea on Thayer
+5ccf15f5faa76400e8e29966,Caliente Mexican Grill
+5b4a618f326bd9777aa5dc2a,Bajas Tex Mex
+5c310f5fdab2cb00310e5b0e,Chinatown On Thayer
+5b4a618f326bd9777aa5dc6a,East Side Pockets
+5b4a618f326bd9777aa5dc5f,Meeting Street Cafe
+5c32d2204ceb00003138cc9a,Mike's Calzones and Deli
+5b4a618f326bd9777aa5dc05,Yan's Cuisine
+5eced6902774c100db66a3d6,Haruki East
+5e21c84bee101e00aabd860d,Pizza Pie-er
+5efc0bbe5b151100bc6119c2,Wok & Pot
+5b4a618f326bd9777aa5dc06,Kabob and Curry
+5b4a618f326bd9777aa5dc46,Thayer Bagel Gourmet Olé
+5b4a618f326bd9777aa5dc83,La Creperie
+5ebca82c34168400ce82573f,Subway (114 Waterman St.)
+5b4a618f326bd9777aa5dc58,Pokeworks on Thayer
+5c106d0064846c0031864a38,by CHLOE
+5f1901c403528b00cc773047,Ceremony
+5b4a618f326bd9777aa5dc80,BGOOD
+5b4a618f326bd9777aa5dc55,Andrea's
+5b4a618f326bd9777aa5dc0c,Tropical Smoothie Cafe on Thayer
+5b8751a94529ee002e82a2db,Louis Restaurant
+5b4a618f326bd9777aa5dc64,Brook St Bagel Gourmet
+5b5eb2f2df6284002eaa0e9d,Geoff's

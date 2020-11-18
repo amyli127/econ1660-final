@@ -1,2 +1,4 @@
 data/bigfiles/*
 .DS_Store
+.RData
+.Rhistory
