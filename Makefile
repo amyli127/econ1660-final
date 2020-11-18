@@ -1,6 +1,6 @@
 PYTHON = python3
 
-.PHONY = help download-master download-raw test clean
+.PHONY = help download-master download-raw test clean process-order-counts
 .DEFAULT_GOAL = help
 
 current_dir = $(shell pwd)
@@ -16,6 +16,7 @@ help:
 	@echo "---------------HELP-----------------"
 	@echo "To download necessary data type make download-master"
 	@echo "To test the project type make test"
+	@echo "To process order counts type process-order-counts"
 	@echo "------------------------------------"
 
 # download clean order data
@@ -28,6 +29,12 @@ download-master: setup
 # download raw order data
 download-raw:
 	# TODO
+
+# processes order counts for all users
+process-order-counts: download-master
+
+	[ -f ${current_dir}/data/bigfiles/order_count.txt ] || python3 data/order_count.py 
+
 
 # run all tests
 test:
