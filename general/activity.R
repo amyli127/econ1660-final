@@ -2,11 +2,11 @@ library(data.table)
 library(ggplot2)
 
 # read in data
-#master_orders <- read.csv('data/bigfiles/master_orders.txt', header=TRUE, sep=',')
-#pvd_stores <- read.csv('data/smallfiles/pvd_stores.txt', header=TRUE, sep=',')
+master_orders <- read.csv('data/bigfiles/master_orders.txt', header=TRUE, sep=',')
+pvd_stores <- read.csv('data/smallfiles/pvd_stores.txt', header=TRUE, sep=',')
 
 # create subset with just PVD orders
-#pvd_orders = subset(master_orders, master_orders$store %in% pvd_stores$X_id)
+pvd_orders = subset(master_orders, master_orders$store %in% pvd_stores$X_id)
 
 # add col with yr-month as value
 setDT(pvd_orders)[, yr_month := format(as.Date(createdAt), "%Y-%m") ]
