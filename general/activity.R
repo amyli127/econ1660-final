@@ -1,23 +1,25 @@
-setwd('~/Documents/School/fall2020/bigData/finalProject')
-
 library(data.table)
 library(ggplot2)
 
 # read in data
-master_orders <- read.csv('data/bigfiles/master_orders.txt', header=TRUE, sep=',')
-master_stores <- read.csv('data/bigfiles/master_stores.txt', header=TRUE, sep=',')
+#master_orders <- read.csv('data/bigfiles/master_orders.txt', header=TRUE, sep=',')
+#pvd_stores <- read.csv('data/smallfiles/pvd_stores.txt', header=TRUE, sep=',')
 
-# add col with yr-month as the value
-setDT(master_orders)[, yr_month := format(as.Date(createdAt), "%Y-%m") ]
+# create subset with just PVD orders
+#pvd_orders = subset(master_orders, master_orders$store %in% pvd_stores$X_id)
 
-# temporarily create PVD subset with just: Bajas Taqueria, Poke Works on Thayer
-pvd_orders = subset(master_orders, master_orders$store == "5b4a618f326bd9777aa5dc58" 
-                    | master_orders$store == "5b4a618f326bd9777aa5dc34")
+# add col with yr-month as value
+setDT(pvd_orders)[, yr_month := format(as.Date(createdAt), "%Y-%m") ]
 
 # create counts for order data
 activity <- pvd_orders[, .N, by=.(store, yr_month)]
 
+# bind with column that maps store id to store name
+activity_stores <- merge(x=activity, y=pvd_stores, by.x="store", by.y="X_id", all.x=TRUE)
+
 # create plots
-activity_plot = ggplot(activity, aes(yr_month, N, group=store, col=store)) + geom_point() + 
-  geom_line() + ggtitle("Bajas and Pokeworks Activity")
+activity_plot = ggplot(activity_stores, aes(yr_month, N, group=name, col=name)) +
+  geom_point() + geom_line() + ggtitle("Providence Restaurant Activity") +
+  ylab("Orders") + xlab("Month") + 
+  scale_x_discrete(breaks = c("2018-01", "2018-05", "2018-09", "2019-01", "2019-05", "2019-09", "2020-01", "2020-05", "2020-09" ))
 plot(activity_plot)
