@@ -1,19 +1,24 @@
 import csv
 
+
+### FEATURE IMPLEMENTATIONS ###
+
+
 # dict of every users to timeline (list of traunch)
 users = {}
 
 ### 
 # traunch is a dict containing following features:
 #
-# order (bool): whether or not order was placed by user in traunch
+# orders (int): number of orders placed by user in traunch
 # day (str): day of week (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
 # meal (str): mealtime of traunch (breakfast, lunch, dinner)
+# semester(int): TODO
 # 
 ###
 
 # initialize traunch fields in template
-TEMPLATE = {'order': False}
+TEMPLATE = {'orders': 0}
 
 # number of traunches
 TRAUNCH_COUNT = -1
@@ -25,7 +30,7 @@ with open(os.getcwd() + '/../data/bigfiles/master_users.txt', "rt", encoding="ut
 		users[user['_id']] = [TEMPLATE.deepcopy() for _ in range(TRAUNCH_COUNT)]
 
 # converts time to traunch index 
-def time_to_traunch_index(time)
+def time_to_traunch_index(time):
 	#TODO
 	pass
 
@@ -43,9 +48,9 @@ def add_orders():
 	with open(os.getcwd() + '/../data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
 		orders_data_reader = csv.DictReader(orders_data)
 		for order in orders_data_reader:
-			date = order['createdAt']
+			time = order['createdAt']
 			traunch_index = time_to_traunch_index(time)
-			users[order['fromUser']][traunch_index]['order'] = True
+			users[order['fromUser']][traunch_index]['orders'] += 1
 
 def add_day():
 	for _, user in users:
@@ -57,12 +62,42 @@ def add_meal():
 		for i, traunch in enumerate(user):
 			traunch['meal'] = traunch_index_to_mealtime(i)
 
+def add_semester_index():
+	#TODO
+	pass
+
 #TODO: create more labels according to this pattern
 
-for label in [add_orders, add_meal, add_day]:
+for label in [add_orders, add_meal, add_day, add_semester_index, ]:
 	label()
 
-#TODO: PROCESS USERS TO DATA POINTS
 
-#TODO: WRITE DATA
+### TRAIN + TEST DATA RENDERING ###
+
+
+rows = []
+features = ['_id', 'user_id']
+
+###
+# rows is a list of data point (dict) containing features:
+#
+# _id (str): id of entry
+# user (str): id of user 
+# <features we desire>
+#
+###
+
+count = 0
+for user_id, user in users:
+	for traunch in user:
+		row = {'_id': str(count), 'user_id': user_id}
+		rows.append(row)
+		count += 1
+
+with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
+	sequence_writer = csv.DictWriter(sequence, fieldnames=features)
+	sequence_writer.writeheader()
+	for row in rows:
+		sequence_writer.writerow(row)
+
 
