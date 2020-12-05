@@ -1,7 +1,13 @@
 import csv
-from os import path
 import datetime
 
+import os, sys
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+from util import unix_time_millis
+
+from os import path
 
 def time_readable():
     basepath = path.dirname(__file__)
@@ -21,8 +27,8 @@ def time_readable():
                 d = datetime.datetime.strptime(timestamp,"%Y-%m-%dT%H:%M:%S.%fZ")
                 writer.writerow([order["_id"], order["createdAt"], d.strftime('%m/%d/%y'), d.month, d.day, d.year, d.strftime('%H:%M'), d.hour, d.minute, d.weekday(), unix_time_millis(d)])
 
-def unix_time_millis(dt):
-    epoch = datetime.datetime.utcfromtimestamp(0)
-    return (dt - epoch).total_seconds() * 1000
+# def unix_time_millis(dt):
+#     epoch = datetime.datetime.utcfromtimestamp(0)
+#     return (dt - epoch).total_seconds() * 1000
 
 time_readable()
