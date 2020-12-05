@@ -4,19 +4,15 @@ import json
 import csv
 
 # assigns net order counts for each user
-
 def parse_order_count(file_name=os.getcwd() + '/data/bigfiles/master_orders.txt'):
-
 	counts = {}
 
 	with open(file_name, "r") as file:
-
 		print('parsing: ' + file_name)
 
 		dict_reader = csv.DictReader(file)
 
 		for row in dict_reader:
-
 			fromUser, toUser = row['fromUser'], row['toUser']
 
 			if fromUser not in counts:
@@ -28,7 +24,6 @@ def parse_order_count(file_name=os.getcwd() + '/data/bigfiles/master_orders.txt'
 			counts[toUser][1] += 1
 
 	with open(os.getcwd() + '/data/bigfiles/order_count.txt', 'w', newline='') as order_counts:
-
 		order_count_writer = csv.DictWriter(order_counts, fieldnames=['_id', 'sent', 'received'])
 		order_count_writer.writeheader()
 

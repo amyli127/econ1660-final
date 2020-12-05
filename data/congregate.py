@@ -15,20 +15,17 @@ objs = []
 
 def parse(i, file_name):
 	temp_file = 'temp' + str(i) +'.txt'
-
 	with open(temp_file, "w") as clean_file:
 		with open(file_name, "r") as file:
-
 			print('parsing: ' + file_name)
 
 			for i, line in enumerate(file):
-
 				if i == 0:
 					clean_file.write('{')
 					continue
 
 				line = list(line)
-
+				
 				if len(line) < 3:
 					clean_file.write("".join(line))
 					continue
@@ -55,7 +52,6 @@ print('finished parsing')
 print('writing clean to orders, users, stores...')
 
 # write to congregated csv, cleanly
-
 with open('bigfiles/master_orders.txt', 'w', newline='') as orders, open('bigfiles/master_users.txt', 'w', newline='') as users, open ('bigfiles/master_stores.txt', 'w', newline='') as stores:
 	order_writer = csv.DictWriter(orders, fieldnames=['_id', 'message', 'fromUser', 'toUser', 'purchaseId', 'status', 'store', 'createdAt', 'updatedAt', '__v'])
 	user_writer = csv.DictWriter(users, fieldnames=['_id', 'firstName', 'username', 'number'])
@@ -70,9 +66,7 @@ with open('bigfiles/master_orders.txt', 'w', newline='') as orders, open('bigfil
 
 	for obj in objs:
 		for el in obj['gifts']:
-
 			# write order
-
 			nested_keys = ['fromUser', 'toUser', 'store']
 			removable_keys = ['numPoints', 'storeCredit', 'globalCredit', 'rewardTemplate', 'isBirthdayGift', 'rewardId', 'public', 'isFromBirthdayPromo']
 			
@@ -92,7 +86,6 @@ with open('bigfiles/master_orders.txt', 'w', newline='') as orders, open('bigfil
 				bad_order_count += 1
 
 			# process user
-
 			def process_user(user):
 				_id = user['_id']
 				if _id not in users_map:
@@ -112,7 +105,6 @@ with open('bigfiles/master_orders.txt', 'w', newline='') as orders, open('bigfil
 				bad_user_count += 1
 	
 			# process store
-
 			try:
 				store = {'_id': el['store']['_id'], 'name': el['store']['name']}
 
@@ -127,7 +119,6 @@ with open('bigfiles/master_orders.txt', 'w', newline='') as orders, open('bigfil
 
 
 	# write users + stores
-
 	for _, val in users_map.items():
 		user_writer.writerow(val)
 	for _, val in stores_map.items():
