@@ -1,4 +1,7 @@
 import csv
+import dateutil.parser
+import os
+from datetime import datetime, timedelta
 
 
 ### FEATURE IMPLEMENTATIONS ###
@@ -23,6 +26,16 @@ TEMPLATE = {'orders': 0}
 # number of traunches
 TRAUNCH_COUNT = -1
 
+# number of tranches per day
+TRANCHES_PER_DAY = 3
+
+# datetime obj of first tranche, based on first order at 2017-06-04 19:30:02.279000+00:00
+# note: set to first mealtime of day of first order to make tranche conversion easier
+FIRST_TRANCHE_DATETIME = dateutil.parser.isoparse("2017-06-04 00:00:01.00000+00:00")
+
+# dict of meal to list containing start (inclusive) and end (exclusive) hour of meal
+MEALTIMES = {"breakfast": [7, 11], "lunch": [11, 15], "dinner": [15, 21]}
+
 # initialize users
 with open(os.getcwd() + '/../data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
 	users_data_reader = csv.DictReader(users_data)
@@ -31,8 +44,33 @@ with open(os.getcwd() + '/../data/bigfiles/master_users.txt', "rt", encoding="ut
 
 # converts time to traunch index 
 def time_to_traunch_index(time):
-	#TODO
-	pass
+	# convert time to datetime
+	datetime_obj = dateutil.parser.isoparse(time)
+
+	# calc difference in days
+	difference = datetime_obj - FIRST_TRANCHE_DATETIME
+	day_length = timedelta(days=1)
+	days_diff, _ = divmod(difference, day_length)
+
+	# convert days difference to tranche difference
+	tranche_diff = TRANCHES_PER_DAY * days_diff
+
+	# add 1-3 tranches depending on hour of order
+	hour_of_day = datetime_obj.hour
+	print(hour_of_day)
+	if hour_of_day >= MEALTIMES["breakfast"][0] and hour_of_day < MEALTIMES["breakfast"][1]:
+		tranche_diff += 1
+	elif hour_of_day >= MEALTIMES["lunch"][0] and hour_of_day < MEALTIMES["lunch"][1]:
+		tranche_diff += 2
+	elif hour_of_day >= MEALTIMES["dinner"][0] and hour_of_day < MEALTIMES["dinner"][1]:
+		tranche_diff += 3
+	else:
+		# TODO: what to return if not during mealtime hours?
+		return -1
+
+	# zero indexed
+	tranche_index = tranche_diff - 1
+	return tranche_index
 
 # converts traunch index to mealtime
 def traunch_index_to_mealtime(time):

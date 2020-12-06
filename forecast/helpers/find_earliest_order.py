@@ -17,4 +17,3 @@ with open(os.getcwd() + '/../../data/bigfiles/master_orders.txt', "rt", encoding
             earliest_date = datetime_obj
 
 print(earliest_date)
-
