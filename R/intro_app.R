@@ -28,6 +28,6 @@ library(ggplot2)
 
 # fix up plot
 #correlation between time from 1st to 2nd order and count of total orders
-pl <- ggplot(master_orders_diff_count, aes(x = diff, y = N)) + geom_point()
+#pl <- ggplot(master_orders_diff_count, aes(x = diff, y = N)) + geom_point()
 
 
