@@ -3,6 +3,7 @@ import dateutil.parser
 import os
 from datetime import datetime, timedelta
 import copy
+import time
 
 # use pip3 to install
 import pytz
@@ -23,11 +24,11 @@ users = {}
 # 
 ###
 
-# initialize traunch fields in template
+# initialize traunch fields in template -> not being used due to deepcopy taking up time
 TEMPLATE = {'orders': 0}
 
 # number of traunches
-TRAUNCH_COUNT = 3500 # start date to ~nov 2020
+TRAUNCH_COUNT = 3500 # start date to ~nov 2020 -> should be 3500
 
 # number of tranches per day
 TRANCHES_PER_DAY = 3
@@ -39,14 +40,15 @@ def naive_to_est(dt):
 	# explicitly add utc 
 	datetime_obj_utc = naive.replace(tzinfo=pytz.timezone('UTC'))
 
-	# conver to eastern
+	# convert to eastern
 	return datetime_obj_utc.astimezone(pytz.timezone('US/Eastern'))
 
 
 # datetime obj of first tranche, based on first order at 2017-06-04 19:30:02.279000+00:003
 # update: datetime is set to start of fall 2017 semester
 # note: set to first mealtime of day of first order to make tranche conversion easier
-FIRST_TRANCHE_DATETIME = naive_to_est("2017-09-03T00:00:00.0000Z")
+# note: this time converts to 12am of 09-03 est
+FIRST_TRANCHE_DATETIME = naive_to_est("2017-09-03T04:00:00.0000Z")
 
 # dict of meal to list containing start (inclusive) and end (exclusive) hour of meal
 MEALTIMES = {"breakfast": [7, 11], "lunch": [11, 15], "dinner": [15, 21]}
@@ -54,8 +56,23 @@ MEALTIMES = {"breakfast": [7, 11], "lunch": [11, 15], "dinner": [15, 21]}
 # initialize users
 with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
 	users_data_reader = csv.DictReader(users_data)
-	for user in users_data_reader:
-		users[user['_id']] = [copy.deepcopy(TEMPLATE) for _ in range(TRAUNCH_COUNT)]
+	with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
+		orders_data_reader = csv.DictReader(orders_data)
+		with open(os.getcwd() + '/data/smallfiles/pvd_stores.txt', "rt", encoding="utf8") as pvd_stores:
+			store_reader = csv.DictReader(pvd_stores)
+			pvd_store_list = []
+			for store in store_reader:
+				pvd_store_list.append(store['_id'])
+			pvd_students = []
+			for order in orders_data_reader:
+				if order['store'] in pvd_store_list:
+					pvd_students.append(order['fromUser'])
+			pvd_students = list(set(pvd_students))
+			start_time = time.time()
+			for user in users_data_reader:
+				if user['_id'] in pvd_students:
+					users[user['_id']] = [{'orders': 0} for _ in range(TRAUNCH_COUNT)] # copy.deepcopy(TEMPLATE)
+			print("--- %s seconds ---" % (time.time() - start_time))
 
 
 # converts datetime to traunch index 
@@ -63,9 +80,8 @@ def time_to_traunch_index(dt):
 	datetime_obj = naive_to_est(dt)
 
 	# calc difference in days
-	difference = datetime_obj - FIRST_TRANCHE_DATETIME
-	day_length = timedelta(days=1)
-	days_diff, _ = divmod(difference, day_length)
+	difference = datetime_obj.date() - FIRST_TRANCHE_DATETIME.date()
+	days_diff = difference.days
 
 	# convert days difference to tranche difference
 	tranche_diff = TRANCHES_PER_DAY * days_diff
@@ -79,7 +95,6 @@ def time_to_traunch_index(dt):
 	elif hour_of_day >= MEALTIMES["dinner"][0] and hour_of_day < MEALTIMES["dinner"][1]:
 		tranche_diff += 3
 	else:
-		# TODO: what to return if not during mealtime hours?
 		return -1
 
 	# zero indexed
@@ -103,11 +118,11 @@ def add_orders():
 	with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
 		orders_data_reader = csv.DictReader(orders_data)
 		for order in orders_data_reader:
-			datetime = order['createdAt']
-			traunch_index = time_to_traunch_index(datetime)
-			# -1 means not in meal time
-			if traunch_index != -1:
-				users[order['fromUser']][traunch_index]['orders'] += 1
+			if order['fromUser'] in users:
+				traunch_index = time_to_traunch_index(order['createdAt'])
+				# negative numbers either not in meal time or before first traunch date
+				if traunch_index >= 0 and traunch_index < len(users[order['fromUser']]):
+					users[order['fromUser']][traunch_index]['orders'] += 1
 
 def add_day_of_week():
 	for _, user in users.items():
@@ -154,9 +169,24 @@ def add_semester_index():
 				traunch['semester'] = -1
 
 #TODO: create more labels according to this pattern
-for label in [add_meal, add_day_of_week, add_semester_index, add_orders]:
+for label in [add_meal, add_day_of_week, add_semester_index, add_orders]: 
+	start_time = time.time()
 	label()
+	print("--- %s seconds ---" % (time.time() - start_time))
 
+def remove_prior_traunches():
+	id_to_date = {}
+	with open(os.getcwd() + '/data/bigfiles/student_join_date.txt', "rt", encoding="utf8") as join_data:
+		join_reader = csv.DictReader(join_data)
+		for entry in join_reader:
+			id_to_date[entry['_id']] = entry['first_order_date']
+	for user_id, user in users.items():
+		user_join_date = id_to_date[user_id]
+		first_tranche_idx = time_to_traunch_index(user_join_date)
+		user = user[first_tranche_idx:]
+		users[user_id] = user
+
+remove_prior_traunches()
 
 ### TRAIN + TEST DATA RENDERING ###
 
@@ -173,15 +203,16 @@ features = ['_id', 'user_id']
 #
 ###
 
-count = 0
-for user_id, user in users.items():
-	for traunch in user:
-		row = {'_id': str(count), 'user_id': user_id}
-		rows.append(row)
-		count += 1
 
-with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
-	sequence_writer = csv.DictWriter(sequence, fieldnames=features)
-	sequence_writer.writeheader()
-	for row in rows:
-		sequence_writer.writerow(row)
+# count = 0
+# for user_id, user in users.items():
+# 	for traunch in user:
+# 		row = {'_id': str(count), 'user_id': user_id}
+# 		rows.append(row)
+# 		count += 1
+
+# with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
+# 	sequence_writer = csv.DictWriter(sequence, fieldnames=features)
+# 	sequence_writer.writeheader()
+# 	for row in rows:
+# 		sequence_writer.writerow(row)
