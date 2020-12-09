@@ -19,16 +19,17 @@ users = {}
 #
 # orders (int): number of orders placed by user in traunch
 # day_of_week (int): day of week (Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun = 6)
+# date (yyyy-mm-dd):
 # meal (str): mealtime of traunch (breakfast, lunch, dinner)
 # semester(int): numbered 1-7
 # 
 ###
 
 # initialize traunch fields in template -> not being used due to deepcopy taking up time
-TEMPLATE = {'orders': 0}
+# TEMPLATE = {'orders': 0}
 
 # number of traunches
-TRAUNCH_COUNT = 3500 # start date to ~nov 2020 -> should be 3500
+TRAUNCH_COUNT = 3500 # start date to ~nov 2020 -> should be ~3500
 
 # number of tranches per day
 TRANCHES_PER_DAY = 3
@@ -53,7 +54,7 @@ FIRST_TRANCHE_DATETIME = naive_to_est("2017-09-03T04:00:00.0000Z")
 # dict of meal to list containing start (inclusive) and end (exclusive) hour of meal
 MEALTIMES = {"breakfast": [7, 11], "lunch": [11, 15], "dinner": [15, 21]}
 
-# initialize users
+# STAGE 1 - INIT
 with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
 	users_data_reader = csv.DictReader(users_data)
 	with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
@@ -72,7 +73,7 @@ with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8"
 			for user in users_data_reader:
 				if user['_id'] in pvd_students:
 					users[user['_id']] = [{'orders': 0} for _ in range(TRAUNCH_COUNT)] # copy.deepcopy(TEMPLATE)
-			print("--- %s seconds ---" % (time.time() - start_time))
+			print("init --- %s seconds ---" % (time.time() - start_time))
 
 
 # converts datetime to traunch index 
@@ -127,7 +128,9 @@ def add_orders():
 def add_day_of_week():
 	for _, user in users.items():
 		for i, traunch in enumerate(user):
-			traunch['day_of_week'] = traunch_index_to_date(i).weekday()
+			date = traunch_index_to_date(i)
+			traunch['day_of_week'] = date.date()
+			traunch['date'] = date.weekday()
 
 def add_meal():
 	for _, user in users.items():
@@ -135,7 +138,6 @@ def add_meal():
 			traunch['meal'] = traunch_index_to_mealtime(i)
 
 def add_semester_index():
-	sems = []
 	starts = ["2017-09-03", "2017-11-27", "2018-01-22", "2018-04-01", 
 			 	"2018-09-02", "2018-11-25", "2019-01-22", "2019-04-01", 
 				"2019-09-02", "2019-12-01", "2020-01-20",
@@ -145,34 +147,33 @@ def add_semester_index():
 				"2019-11-25", "2019-12-20", "2020-03-19",
 				"2020-11-20"]
 	indx = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7]
-	for i in range(len(indx)):
-		# create dictionaries which represent on-campus intervals. usually 2 per semester
-		sem = {}
-		sem['start_date'] = dateutil.parser.isoparse(starts[i]).astimezone(pytz.timezone('US/Eastern'))
-		sem['end_date'] = dateutil.parser.isoparse(ends[i]).astimezone(pytz.timezone('US/Eastern'))
-		sem['idx'] = indx[i]
-		sems.append(sem)
+
+	start_dates = [dateutil.parser.isoparse(start).date() for start in starts]
+	end_dates = [dateutil.parser.isoparse(end).date() for end in ends]
+
+	start_dates_set = set(start_dates)
+	end_dates_set = set(end_dates)
 
 	for _, user in users.items():
 		for i, traunch in enumerate(user):
-			date = traunch_index_to_date(i)
-			# find interval that contains the given date, -1 if no such interval exists
-			for sem in sems:
-				if date < sem['start_date']:
-					# not a time in which students on campus during a semester
-					traunch['semester'] = -1
-					break
-				elif date >= sem['start_date'] and date <= sem['end_date']:
-					traunch['semester'] = sem['idx']
-					break
-			if 'semester' not in traunch:
+			date = traunch_index_to_date(i).date()
+			if date in start_dates_set:
+				traunch['semester'] = indx[start_dates.index(date)]
+			elif date in end_dates_set:
 				traunch['semester'] = -1
+			else:
+				traunch['semester'] = user[i - 1]['semester']
 
-#TODO: create more labels according to this pattern
-for label in [add_meal, add_day_of_week, add_semester_index, add_orders]: 
+### STAGE 1 EXECUTE
+
+for label in [add_meal, add_day_of_week, add_orders, add_semester_index]:  
+	print(label) 
 	start_time = time.time()
 	label()
 	print("--- %s seconds ---" % (time.time() - start_time))
+
+
+### STAGE  1.5
 
 def remove_prior_traunches():
 	id_to_date = {}
@@ -186,13 +187,60 @@ def remove_prior_traunches():
 		user = user[first_tranche_idx:]
 		users[user_id] = user
 
+start_time = time.time()
 remove_prior_traunches()
+print("rem --- %s seconds ---" % (time.time() - start_time))
+
+
+# print(users['5bbd1921fc545d002dc5299e'][5:200])
+
+
+### STAGE 2 INIT
+
+# map from user_id to a list of their feature maps
+user_model = {}
+
+start_time = time.time()
+for user_id, user in users.items(): 
+	user_model[user_id] = [{} for _ in range(len(user))]
+print("init --- %s seconds ---" % (time.time() - start_time))
+
+### STAGE 2 EXECUTE
+
+def past_x(user, t_idx, curr_sem, days):
+	order_count = 0
+	for i in range(days * TRANCHES_PER_DAY):
+		offset = i + 1
+		if t_idx - offset >= 0 and user[t_idx - offset]['semester'] == curr_sem:
+			order_count += user[t_idx - offset]['orders']
+		else:
+			return None
+	return order_count
+
+
+def prev_days():
+	for mod_user_id, mod_user in user_model.items():
+		for t_idx, traunch in enumerate(users[mod_user_id]):
+			sem = traunch['semester']
+			mod_user[t_idx]['past_24_hrs'] = past_x(users[mod_user_id], t_idx, sem, 1)
+			mod_user[t_idx]['past_3_days'] = past_x(users[mod_user_id], t_idx, sem, 3)
+			mod_user[t_idx]['past_7_days'] = past_x(users[mod_user_id], t_idx, sem, 7)
+			mod_user[t_idx]['past_30_days'] = past_x(users[mod_user_id], t_idx, sem, 30)
+
+for label in [prev_days]:
+	print(label) 
+	start_time = time.time()
+	label()
+	print("--- %s seconds ---" % (time.time() - start_time))
+
+
+# print(user_model['5bbd1921fc545d002dc5299e'][5:200])
 
 ### TRAIN + TEST DATA RENDERING ###
 
 
-rows = []
-features = ['_id', 'user_id']
+# rows = []
+# features = ['_id', 'user_id']
 
 ###
 # rows is a list of data point (dict) containing features:
