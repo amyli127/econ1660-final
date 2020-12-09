@@ -1,18 +1,13 @@
+import argparse
 import csv
+import pickle
 import dateutil.parser
 import os
-from datetime import datetime, timedelta
 import copy
 import time
-
-# use pip3 to install
 import pytz
 
-### FEATURE IMPLEMENTATIONS ###
-
-
-# dict of every users to timeline (list of traunch)
-users = {}
+from datetime import datetime, timedelta
 
 ### 
 # traunch is a dict containing following features:
@@ -26,8 +21,7 @@ users = {}
 # 
 ###
 
-# initialize traunch fields in template -> not being used due to deepcopy taking up time
-# TEMPLATE = {'orders': 0}
+### FEATURE IMPLEMENTATIONS ###
 
 # number of traunches
 TRAUNCH_COUNT = 3500 # start date to ~nov 2020 -> should be ~3500
@@ -45,7 +39,6 @@ def naive_to_est(dt):
 	# convert to eastern
 	return datetime_obj_utc.astimezone(pytz.timezone('US/Eastern'))
 
-
 # datetime obj of first tranche, based on first order at 2017-06-04 19:30:02.279000+00:003
 # update: datetime is set to start of fall 2017 semester
 # note: set to first mealtime of day of first order to make tranche conversion easier
@@ -55,27 +48,7 @@ FIRST_TRANCHE_DATETIME = naive_to_est("2017-09-03T04:00:00.0000Z")
 # dict of meal to list containing start (inclusive) and end (exclusive) hour of meal
 MEALTIMES = {"breakfast": [7, 11], "lunch": [11, 15], "dinner": [15, 21]}
 
-# STAGE 1 - INIT
-with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
-	users_data_reader = csv.DictReader(users_data)
-	with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
-		orders_data_reader = csv.DictReader(orders_data)
-		with open(os.getcwd() + '/data/smallfiles/pvd_stores.txt', "rt", encoding="utf8") as pvd_stores:
-			store_reader = csv.DictReader(pvd_stores)
-			pvd_store_list = []
-			for store in store_reader:
-				pvd_store_list.append(store['_id'])
-			pvd_students = []
-			for order in orders_data_reader:
-				if order['store'] in pvd_store_list:
-					pvd_students.append(order['fromUser'])
-			pvd_students = list(set(pvd_students))
-			start_time = time.time()
-			for user in users_data_reader:
-				if user['_id'] in pvd_students:
-					users[user['_id']] = [{'orders': 0} for _ in range(TRAUNCH_COUNT)] # copy.deepcopy(TEMPLATE)
-			print("init --- %s seconds ---" % (time.time() - start_time))
-
+# HELPER FUNCTIONS
 
 # converts datetime to traunch index 
 def time_to_traunch_index(dt):
@@ -115,6 +88,58 @@ def traunch_index_to_mealtime(idx):
 def traunch_index_to_date(idx):
 	days_since_first_tranche = idx / 3
 	return FIRST_TRANCHE_DATETIME + timedelta(days=days_since_first_tranche)
+
+def is_contiguous(user, cur_ind, prev_ind):
+	prev_ind >= 0 and user[cur_ind]['semester'] == user[prev_ind]['semester']
+
+def gen_id_to_date():
+	id_to_date = {}
+	with open(os.getcwd() + '/data/bigfiles/student_join_date.txt', "rt", encoding="utf8") as join_data:
+		join_reader = csv.DictReader(join_data)
+		for entry in join_reader:
+			id_to_date[entry['_id']] = entry['first_order_date']
+	return id_to_date
+
+
+# STAGE 1
+
+def init_users():
+
+	# dict of every users to timeline (list of traunch)
+	users = {}
+
+	### 
+	# traunch is a dict containing following features:
+	#
+	# orders (int): number of orders placed by user in traunch
+	# day_of_week (int): day of week (Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun = 6)
+	# date (yyyy-mm-dd):
+	# meal (str): mealtime of traunch (breakfast, lunch, dinner)
+	# semester(int): numbered 1-7
+	# 
+	###
+
+	with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
+		users_data_reader = csv.DictReader(users_data)
+		with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
+			orders_data_reader = csv.DictReader(orders_data)
+			with open(os.getcwd() + '/data/smallfiles/pvd_stores.txt', "rt", encoding="utf8") as pvd_stores:
+				store_reader = csv.DictReader(pvd_stores)
+				pvd_store_list = []
+				for store in store_reader:
+					pvd_store_list.append(store['_id'])
+				pvd_students = []
+				for order in orders_data_reader:
+					if order['store'] in pvd_store_list:
+						pvd_students.append(order['fromUser'])
+				pvd_students = list(set(pvd_students))
+				start_time = time.time()
+				for user in users_data_reader:
+					if user['_id'] in pvd_students:
+						users[user['_id']] = [{'orders': 0} for _ in range(TRAUNCH_COUNT)] # copy.deepcopy(TEMPLATE)
+				print("init --- %s seconds ---" % (time.time() - start_time))
+
+	return users
 
 def add_orders():
 	with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
@@ -174,28 +199,21 @@ for label in [add_meal, add_day_info, add_orders, add_semester_index]:
 	label()
 	print("--- %s seconds ---" % (time.time() - start_time))
 
+	for _, user in users.items():
+		for i in range(TRAUNCH_COUNT):
+			user[i]['avg_order_per_person_prev_hour'] = vals[i]
 
-### STAGE  1.5
+### STAGE 1.5
 
 def remove_prior_traunches():
-	id_to_date = {}
-	with open(os.getcwd() + '/data/bigfiles/student_join_date.txt', "rt", encoding="utf8") as join_data:
-		join_reader = csv.DictReader(join_data)
-		for entry in join_reader:
-			id_to_date[entry['_id']] = entry['first_order_date']
+	id_to_date = gen_id_to_date()
 	for user_id, user in users.items():
 		user_join_date = id_to_date[user_id]
 		first_tranche_idx = time_to_traunch_index(user_join_date)
 		user = user[first_tranche_idx:]
 		users[user_id] = user
 
-start_time = time.time()
-remove_prior_traunches()
-print("rem --- %s seconds ---" % (time.time() - start_time))
-
-
-
-### STAGE 2 EXECUTE
+### STAGE 2
 
 def same_semester(user, idx, offset):
 	idx_new = idx - offset
@@ -210,7 +228,6 @@ def past_x(user, t_idx, days):
 		else:
 			return None
 	return order_count
-
 
 def prev_days():
 	for _, user in users.items():
@@ -265,9 +282,39 @@ for label in [prev_days, add_percent_orders_this_semester_same_mealtime]:
 	label()
 	print("--- %s seconds ---" % (time.time() - start_time))
 
+def weather_hour_to_est(dt):
+	naive = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S +0000 UTC")
+
+	# explicitly add utc 
+	#datetime_obj_utc = naive.replace(tzinfo=pytz.timezone('UTC'))
+
+	# convert to eastern
+	return naive.astimezone(pytz.timezone('US/Eastern'))
+
+
+def add_weather():
+	with open(os.getcwd() + '/data/bigfiles/weather.csv', 'rt', newline='') as weather_data:
+		hour_to_info = {}
+		weather_reader = csv.DictReader(weather_data)
+		for hour_entry in weather_reader:
+			weather_datetime = weather_hour_to_est(hour_entry['dt_iso'])
+			hour_to_info[(weather_datetime.date(), weather_datetime.hour)] = {'feels_like': hour_entry['feels_like'], 'rain_past_hour': hour_entry['rain_1h'], 'snow_past_hour': hour_entry['snow_1h']}
+		for _, user in users.items():
+			for _, traunch in enumerate(user):
+				date = traunch['date']
+				meal = traunch['meal']
+				if meal == 'breakfast':
+					weather_info = hour_to_info[(date, 9)]
+				elif meal == 'lunch':
+					weather_info = hour_to_info[(date, 13)]
+				else:
+					weather_info = hour_to_info[(date, 18)]
+				traunch['feels_like'] = float(weather_info['feels_like'] or 0)
+				traunch['rain_past_hour'] = float(weather_info['rain_past_hour'] or 0)
+				traunch['snow_past_hour'] = float(weather_info['snow_past_hour'] or 0)
+				
 
 ### TRAIN + TEST DATA RENDERING ###
-
 
 # rows = []
 # features = ['_id', 'user_id']
@@ -294,3 +341,38 @@ for label in [prev_days, add_percent_orders_this_semester_same_mealtime]:
 # 	sequence_writer.writeheader()
 # 	for row in rows:
 # 		sequence_writer.writerow(row)
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-load1', action='store_true', default=False)
+	args = parser.parse_args()
+
+	if args.load1:
+		with open('seq_cache1' + '.pickle', 'rb') as f:
+			users = pickle.load(f)
+	else:
+		users = init_users()
+		### STAGE 1 EXECUTE
+		for label in [init_users, add_meal, add_day_of_week, add_orders, add_semester_index, add_avg_order_per_person_aggregate]:  
+			print(label) 
+			start_time = time.time()
+			label()
+			print("--- %s seconds ---" % (time.time() - start_time))
+
+		# save users
+		with open('seq_cache1' + '.pickle', 'wb') as f:
+		    pickle.dump(users, f)
+
+	### STAGE 1.5 EXECUTE
+	start_time = time.time()
+	remove_prior_traunches()
+	print("rem --- %s seconds ---" % (time.time() - start_time))
+
+	### STAGE 2 EXECUTE
+	for label in [prev_days, add_weather]:
+		print(label) 
+		start_time = time.time()
+		label()
+		print("--- %s seconds ---" % (time.time() - start_time))
+
+	print(users['5bbd1921fc545d002dc5299e'][:4])
