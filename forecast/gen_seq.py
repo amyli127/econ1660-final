@@ -129,8 +129,8 @@ def add_day_of_week():
 	for _, user in users.items():
 		for i, traunch in enumerate(user):
 			date = traunch_index_to_date(i)
-			traunch['day_of_week'] = date.date()
-			traunch['date'] = date.weekday()
+			traunch['day_of_week'] = date.weekday() 
+			traunch['date'] = date.date()
 
 def add_meal():
 	for _, user in users.items():
