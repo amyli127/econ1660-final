@@ -125,7 +125,7 @@ def add_orders():
 				if traunch_index >= 0 and traunch_index < len(users[order['fromUser']]):
 					users[order['fromUser']][traunch_index]['orders'] += 1
 
-def add_day_of_week():
+def add_day_info():
 	for _, user in users.items():
 		for i, traunch in enumerate(user):
 			date = traunch_index_to_date(i)
@@ -166,7 +166,7 @@ def add_semester_index():
 
 ### STAGE 1 EXECUTE
 
-for label in [add_meal, add_day_of_week, add_orders, add_semester_index]:  
+for label in [add_meal, add_day_info, add_orders, add_semester_index]:  
 	print(label) 
 	start_time = time.time()
 	label()
@@ -192,26 +192,18 @@ remove_prior_traunches()
 print("rem --- %s seconds ---" % (time.time() - start_time))
 
 
-# print(users['5bbd1921fc545d002dc5299e'][5:200])
-
-
-### STAGE 2 INIT
-
-# map from user_id to a list of their feature maps
-user_model = {}
-
-start_time = time.time()
-for user_id, user in users.items(): 
-	user_model[user_id] = [{} for _ in range(len(user))]
-print("init --- %s seconds ---" % (time.time() - start_time))
 
 ### STAGE 2 EXECUTE
 
-def past_x(user, t_idx, curr_sem, days):
+def same_semester(user, idx, offset):
+	idx_new = idx - offset
+	return idx_new >= 0 and user[idx]['semester'] == user[idx_new]['semester']
+
+def past_x(user, t_idx, days):
 	order_count = 0
 	for i in range(days * TRANCHES_PER_DAY):
 		offset = i + 1
-		if t_idx - offset >= 0 and user[t_idx - offset]['semester'] == curr_sem:
+		if same_semester(user, t_idx, offset):
 			order_count += user[t_idx - offset]['orders']
 		else:
 			return None
@@ -219,13 +211,12 @@ def past_x(user, t_idx, curr_sem, days):
 
 
 def prev_days():
-	for mod_user_id, mod_user in user_model.items():
-		for t_idx, traunch in enumerate(users[mod_user_id]):
-			sem = traunch['semester']
-			mod_user[t_idx]['past_24_hrs'] = past_x(users[mod_user_id], t_idx, sem, 1)
-			mod_user[t_idx]['past_3_days'] = past_x(users[mod_user_id], t_idx, sem, 3)
-			mod_user[t_idx]['past_7_days'] = past_x(users[mod_user_id], t_idx, sem, 7)
-			mod_user[t_idx]['past_30_days'] = past_x(users[mod_user_id], t_idx, sem, 30)
+	for _, user in users.items():
+		for t_idx, traunch in enumerate(user):
+			traunch['past_24_hrs'] = past_x(user, t_idx, 1)
+			traunch['past_3_days'] = past_x(user, t_idx, 3)
+			traunch['past_7_days'] = past_x(user, t_idx, 7)
+			traunch['past_30_days'] = past_x(user, t_idx, 30)
 
 for label in [prev_days]:
 	print(label) 
@@ -233,8 +224,6 @@ for label in [prev_days]:
 	label()
 	print("--- %s seconds ---" % (time.time() - start_time))
 
-
-# print(user_model['5bbd1921fc545d002dc5299e'][5:200])
 
 ### TRAIN + TEST DATA RENDERING ###
 
