@@ -441,9 +441,10 @@ def filter_features():
 				else:
 					row[el] = traunch[el]
 			rows.append(row)
+	return rows
 
-
-	features_transformed = ['orders', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+def write_output(rows):
+	final_features = ['orders', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
 		 		'breakfast', 'lunch', 'dinner', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days',
 				'past_7_days', 'past_30_days', "percent_orders_this_semester_same_mealtime",
 				"percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour',
@@ -451,7 +452,7 @@ def filter_features():
 
 
 	with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
-		sequence_writer = csv.DictWriter(sequence, fieldnames=features_transformed)
+		sequence_writer = csv.DictWriter(sequence, fieldnames=final_features)
 		sequence_writer.writeheader()
 		for row in rows:
 			sequence_writer.writerow(row)
@@ -494,4 +495,5 @@ if __name__ == '__main__':
 	### STAGE 3 EXECUTE
 
 	filter_traunches()
-	filter_features()
+	rows = filter_features()
+	write_output(rows)
