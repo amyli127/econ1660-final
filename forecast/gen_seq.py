@@ -9,19 +9,6 @@ import pytz
 
 from datetime import datetime, timedelta
 
-### 
-# traunch is a dict containing following features:
-#
-# orders (int): number of orders placed by user in traunch
-# day_of_week (int): day of week (Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun = 6)
-# date (yyyy-mm-dd):
-# meal (str): mealtime of traunch (breakfast, lunch, dinner)
-# semester(int): numbered 1-7
-# percent_orders_this_semester_same_mealtime (num): percent of orders in semester up to current tranche that were at same mealtime
-# percent_orders_this_semester_same_day_of_week (num): percent of orders in semester up to current tranche that were on the same day of week
-# 
-###
-
 ### FEATURE IMPLEMENTATIONS ###
 
 # number of traunches
@@ -117,8 +104,11 @@ def init_users():
 	# date (yyyy-mm-dd):
 	# meal (str): mealtime of traunch (breakfast, lunch, dinner)
 	# semester(int): numbered 1-7
+	# percent_orders_this_semester_same_mealtime (num): percent of orders in semester up to current tranche that were at same mealtime
+	# percent_orders_this_semester_same_day_of_week (num): percent of orders in semester up to current tranche that were on the same day of week
 	# 
 	###
+
 
 	with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
 		users_data_reader = csv.DictReader(users_data)
@@ -191,18 +181,33 @@ def add_semester_index():
 			else:
 				traunch['semester'] = user[i - 1]['semester']
 
-### STAGE 1 EXECUTE
+# must be called before pruning inactive user traunches
+def add_avg_order_per_person_aggregate():
+	id_to_date = gen_id_to_date()
+	vals = []
+	for i in range(TRAUNCH_COUNT):
 
-print("starting stage 1")
-for label in [add_meal, add_day_info, add_orders, add_semester_index]:  
-	print(label) 
-	start_time = time.time()
-	label()
-	print("--- %s seconds ---" % (time.time() - start_time))
+		if i == 0 or not is_contiguous(list(users.values())[0], i, i - 1):
+			vals.append(None)
+			continue
+
+		order_sum, user_count = 0, 0
+		for id_, user in users.items():
+			# check if user has joined
+			user_join_date = id_to_date[id_]
+			join_index = time_to_traunch_index(user_join_date)
+			if join_index > i - 1:
+				continue
+			
+			user_count += 1
+			order_sum += user[i - 1]['orders']
+
+		vals.append(order_sum / max(1, user_count))
 
 	for _, user in users.items():
 		for i in range(TRAUNCH_COUNT):
 			user[i]['avg_order_per_person_prev_hour'] = vals[i]
+
 
 ### STAGE 1.5
 
@@ -220,6 +225,7 @@ def same_semester(user, idx, offset):
 	idx_new = idx - offset
 	return idx_new >= 0 and user[idx]['semester'] == user[idx_new]['semester']
 
+
 def past_x(user, t_idx, days):
 	order_count = 0
 	for i in range(days * TRANCHES_PER_DAY):
@@ -230,6 +236,7 @@ def past_x(user, t_idx, days):
 			return None
 	return order_count
 
+
 def prev_days():
 	for _, user in users.items():
 		for t_idx, traunch in enumerate(user):
@@ -237,6 +244,7 @@ def prev_days():
 			traunch['past_3_days'] = past_x(user, t_idx, 3)
 			traunch['past_7_days'] = past_x(user, t_idx, 7)
 			traunch['past_30_days'] = past_x(user, t_idx, 30)
+
 
 # calculates the percentage of orders this semester in the same mealtime
 def add_percent_orders_this_semester_same_mealtime():
@@ -274,7 +282,7 @@ def add_percent_orders_this_semester_same_day_of_week():
 		for sem in range(1, 8):
 			semester_day_counts = {}	
 			for day in range(7):
-				day_counts[day] = 0
+				semester_day_counts[day] = 0
 			day_counts[sem] = semester_day_counts
 
 		for _, traunch in enumerate(user):
@@ -284,8 +292,8 @@ def add_percent_orders_this_semester_same_day_of_week():
 				continue
 
 			# calculate percent orders and set field in tranche
-			day = traunch["day_of_week"]
-			curr_day_orders = day_counts[semester][day]
+			day_of_week = traunch["day_of_week"]
+			curr_day_orders = day_counts[semester][day_of_week]
 
 			tot_orders = 0		
 			for day in range(7):
@@ -295,15 +303,8 @@ def add_percent_orders_this_semester_same_day_of_week():
 			traunch["percent_orders_this_semester_same_day_of_week"] = percent_orders
 
 			# update day_counts
-			day_counts[semester][day] += traunch["orders"]
+			day_counts[semester][day_of_week] += traunch["orders"]
 
-
-
-for label in [prev_days, add_percent_orders_this_semester_same_mealtime]:
-	print(label) 
-	start_time = time.time()
-	label()
-	print("--- %s seconds ---" % (time.time() - start_time))
 
 def weather_hour_to_est(dt):
 	naive = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S +0000 UTC")
