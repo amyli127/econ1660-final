@@ -349,16 +349,37 @@ def filter_traunches():
 
 ### STAGE 3
 
+def day_of_week_discrete(day):
+	if day == 0:
+		return 'monday'
+	elif day == 1:
+		return 'tuesday'
+	elif day == 2:
+		return 'wednesday'
+	elif day == 3:
+		return 'thursday'
+	elif day == 4:
+		return 'friday'
+	elif day == 5:
+		return 'saturday'
+	elif day == 6:
+		return 'sunday'
+
+
+
 def filter_features():
 	rows = []
-	features = ['orders', 'day_of_week', 'meal', 'semester', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days', 'past_7_days', 'past_30_days', \
+	features = ['orders', 'day_of_week', 'meal', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days', 'past_7_days', 'past_30_days', \
 				"percent_orders_this_semester_same_mealtime", "percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour']
 
-	for user_id, user in users.items():
+	for _, user in users.items():
 		for traunch in user:
 			row = {}
 			for el in features:
-				row[el] = traunch[el]
+				if el == 'day_of_week':
+					row[el] = day_of_week_discrete(traunch[el])
+				else:
+					row[el] = traunch[el]
 			rows.append(row)
 
 	with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
@@ -379,7 +400,7 @@ if __name__ == '__main__':
 	else:
 		users = init_users()
 		### STAGE 1 EXECUTE
-		for label in [add_day_info, add_semester_index]:  # add_meal, add_orders, add_avg_order_per_person_aggregate
+		for label in [add_day_info, add_semester_index, add_meal, add_orders, add_avg_order_per_person_aggregate]:
 			print(label) 
 			start_time = time.time()
 			label()
