@@ -1,4 +1,5 @@
 import argparse
+import os
 from numpy import loadtxt
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
@@ -40,7 +41,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 
-	X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=test_size, random_state=seed)
+	X_train, X_test, y_train, y_test = load_data()
 
 	model = train(X_train, y_train, args)
 
