@@ -99,13 +99,17 @@ def init_users():
 	### 
 	# traunch is a dict containing following features:
 	#
-	# orders (int): number of orders placed by user in traunch
-	# day_of_week (int): day of week (Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun = 6)
+	# orders (int): 										number of orders placed by user in traunch
+	# day_of_week (int): 									day of week (Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun = 6)
 	# date (yyyy-mm-dd):
-	# meal (str): mealtime of traunch (breakfast, lunch, dinner)
+	# week_of_year (int): 									week of year (1-53, where a week starts on a Monday and ends on Sunday)
+	# meal (str): 											mealtime of traunch (breakfast, lunch, dinner)
 	# semester(int): numbered 1-7
-	# percent_orders_this_semester_same_mealtime (num): percent of orders in semester up to current tranche that were at same mealtime
-	# percent_orders_this_semester_same_day_of_week (num): percent of orders in semester up to current tranche that were on the same day of week
+	# percent_orders_this_semester_same_mealtime (num): 	percent of orders in semester up to current tranche that were at same mealtime
+	# percent_orders_this_semester_same_day_of_week (num): 	percent of orders in semester up to current tranche that were on the same day of week
+	# avg_orders_per_week_same_semester (num): 				avg number of orders per week in current semester up to current tranche
+	# avg_orders_per_week_total (num):						avg number of orders per week total up to current tranche
+	# avg_orders_same_day_of_week_same_mealtime_same_semester (num): avg number of orders per week in semester up to current tranche that were on the same day of the week and same mealtiem
 	# 
 	###
 
@@ -148,6 +152,7 @@ def add_day_info():
 			date = traunch_index_to_date(i)
 			traunch['day_of_week'] = date.weekday() 
 			traunch['date'] = date.date()
+			traunch['week_of_year'] = date.isocalendar()[1]
 
 def add_meal():
 	for _, user in users.items():
@@ -304,6 +309,54 @@ def add_percent_orders_this_semester_same_day_of_week():
 
 			# update day_counts
 			day_counts[semester][day_of_week] += traunch["orders"]
+
+
+# calculates and adds following fields to tranche:
+# 	avg_orders_per_week_same_semester
+#	avg_orders_per_week_total
+# see traunch description for more information on fields
+def add_avg_orders_per_week_same_semester_and_total() :
+	for _, user in users.items():
+		# initialize dict from semester to number of orders
+		semester_counts = {}
+		for s in range(1, 8):
+			semester_counts[s] = 0
+
+		# initialize dict from semester to set of weeks (num representing week of year)
+		semester_weeks = {}
+		for s in range(1, 8):
+			semester_weeks[s] = set()
+
+		for _, traunch in enumerate(user):
+			semester = traunch["semester"]
+			# skip if not in school semester
+			if semester == -1:
+				continue
+
+			# calc and set avg_orders_per_week_this_semester
+			tot_orders_this_semester = semester_counts[semester]
+			num_weeks_this_semester = len(semester_weeks[semester])
+			avg_orders_per_week_this_semester = 0 if num_weeks_this_semester == 0 else tot_orders_this_semester / num_weeks_this_semester
+			traunch["avg_orders_per_week_this_semester"] = avg_orders_per_week_this_semester
+
+			# calc and set avg_orders_per_week_total
+			tot_orders, num_weeks_total = 0, 0
+			for s in range(1, 8):
+				tot_orders += semester_counts[s]
+				num_weeks_total += len(semester_weeks[s])
+
+			avg_orders_per_week_total = 0 if num_weeks_total == 0 else tot_orders / num_weeks_total
+			traunch["avg_orders_per_week_total"] = avg_orders_per_week_total
+
+			# update dicts
+			week = traunch["week_of_year"]
+			semester_weeks[semester].add(week)
+			semester_counts[semester] += traunch["orders"]
+
+
+# calculates the average number of orders Ver week this semester from the same day of week and same mealtime
+def add_avg_orders_same_day_of_week_same_mealtime_same_semester():
+	pass
 
 
 def weather_hour_to_est(dt):
