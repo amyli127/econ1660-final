@@ -187,7 +187,7 @@ def add_avg_order_per_person_aggregate():
 	vals = []
 	for i in range(TRAUNCH_COUNT):
 
-		if i == 0 or not is_contiguous(list(users.values())[0], i, i - 1):
+		if traunch_index_to_mealtime(i) == 'breakfast' or not is_contiguous(list(users.values())[0], i, i - 1):
 			vals.append(None)
 			continue
 
@@ -372,19 +372,19 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	if args.load1:
-		with open('seq_cache1' + '.pickle', 'rb') as f:
+		with open(os.getcwd() + '/data/bigfiles/seq_cache1' + '.pickle', 'rb') as f:
 			users = pickle.load(f)
 	else:
 		users = init_users()
 		### STAGE 1 EXECUTE
-		for label in [init_users, add_meal, add_day_of_week, add_orders, add_semester_index, add_avg_order_per_person_aggregate]:  
+		for label in [add_meal, add_day_info, add_orders, add_semester_index, add_avg_order_per_person_aggregate]:  
 			print(label) 
 			start_time = time.time()
 			label()
 			print("--- %s seconds ---" % (time.time() - start_time))
 
 		# save users
-		with open('seq_cache1' + '.pickle', 'wb') as f:
+		with open(os.getcwd() + '/data/bigfiles/seq_cache1' + '.pickle', 'wb') as f:
 		    pickle.dump(users, f)
 
 	### STAGE 1.5 EXECUTE
