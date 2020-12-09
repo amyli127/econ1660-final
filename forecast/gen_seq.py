@@ -347,33 +347,26 @@ def filter_traunches():
 					bad_traunches.add(t_idx)
 			users[user_id] = [traunch for i, traunch in enumerate(user) if i not in bad_traunches]
 
-### TRAIN + TEST DATA RENDERING ###
+### STAGE 3
 
-# rows = []
-# features = ['_id', 'user_id']
+def filter_features():
+	rows = []
+	features = ['orders', 'day_of_week', 'meal', 'semester', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days', 'past_7_days', 'past_30_days', \
+				"percent_orders_this_semester_same_mealtime", "percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour']
 
-###
-# rows is a list of data point (dict) containing features:
-#
-# _id (str): id of entry
-# user (str): id of user 
-# <features we desire>
-#
-###
+	for user_id, user in users.items():
+		for traunch in user:
+			row = {}
+			for el in features:
+				row[el] = traunch[el]
+			rows.append(row)
 
+	with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
+		sequence_writer = csv.DictWriter(sequence, fieldnames=features)
+		sequence_writer.writeheader()
+		for row in rows:
+			sequence_writer.writerow(row)
 
-# count = 0
-# for user_id, user in users.items():
-# 	for traunch in user:
-# 		row = {'_id': str(count), 'user_id': user_id}
-# 		rows.append(row)
-# 		count += 1
-
-# with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
-# 	sequence_writer = csv.DictWriter(sequence, fieldnames=features)
-# 	sequence_writer.writeheader()
-# 	for row in rows:
-# 		sequence_writer.writerow(row)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
@@ -409,16 +402,6 @@ if __name__ == '__main__':
 		print("--- %s seconds ---" % (time.time() - start_time))
 
 	### STAGE 3 EXECUTE
-	
-	count = 0
-	for _, user in users.items():
-		count += len(user)
-	print(count)
 
 	filter_traunches()
-
-	count = 0
-	for _, user in users.items():
-		count += len(user)
-	print(count)
-
+	filter_features()
