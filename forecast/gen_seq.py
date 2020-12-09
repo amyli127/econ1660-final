@@ -422,8 +422,9 @@ def day_of_week_discrete(day):
 
 def filter_features():
 	rows = []
-	features = ['orders', 'day_of_week', 'meal', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days', 'past_7_days', 'past_30_days', \
-				"percent_orders_this_semester_same_mealtime", "percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour']
+	features = ['orders', 'day_of_week', 'meal', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days', 'past_7_days', 'past_30_days',
+				"percent_orders_this_semester_same_mealtime", "percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour', 
+				'avg_orders_per_week_this_semester', 'avg_orders_per_week_total']
 
 	for _, user in users.items():
 		for traunch in user:
@@ -445,7 +446,8 @@ def filter_features():
 	features_transformed = ['orders', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
 		 		'breakfast', 'lunch', 'dinner', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days',
 				'past_7_days', 'past_30_days', "percent_orders_this_semester_same_mealtime",
-				"percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour']
+				"percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour',
+				'avg_orders_per_week_this_semester', 'avg_orders_per_week_total']
 
 
 	with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
@@ -482,7 +484,8 @@ if __name__ == '__main__':
 	print("rem --- %s seconds ---" % (time.time() - start_time))
 
 	### STAGE 2 EXECUTE
-	for label in [prev_days, add_weather, add_percent_orders_this_semester_same_mealtime, add_percent_orders_this_semester_same_day_of_week]:
+	for label in [prev_days, add_weather, add_percent_orders_this_semester_same_mealtime, add_percent_orders_this_semester_same_day_of_week, 
+				  add_avg_orders_per_week_same_semester_and_total, add_avg_orders_same_day_of_week_same_mealtime_same_semester]:
 		print(label) 
 		start_time = time.time()
 		label()
