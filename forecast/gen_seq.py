@@ -377,13 +377,26 @@ def filter_features():
 			row = {}
 			for el in features:
 				if el == 'day_of_week':
-					row[el] = day_of_week_discrete(traunch[el])
+					days_dict = {'monday': 0, 'tuesday': 0, 'wednesday': 0, 'thursday': 0, 'friday': 0, 'saturday': 0, 'sunday': 0}
+					days_dict[day_of_week_discrete(traunch[el])] = 1
+					row.update(days_dict)
+				elif el == 'meal':
+					meal_dict = {'breakfast': 0, 'lunch': 0, 'dinner': 0}
+					meal_dict[traunch[el]] = 1
+					row.update(meal_dict)
 				else:
 					row[el] = traunch[el]
 			rows.append(row)
 
+
+	features_transformed = ['orders', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+		 		'breakfast', 'lunch', 'dinner', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days',
+				'past_7_days', 'past_30_days', "percent_orders_this_semester_same_mealtime",
+				"percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour']
+
+
 	with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
-		sequence_writer = csv.DictWriter(sequence, fieldnames=features)
+		sequence_writer = csv.DictWriter(sequence, fieldnames=features_transformed)
 		sequence_writer.writeheader()
 		for row in rows:
 			sequence_writer.writerow(row)
@@ -400,7 +413,7 @@ if __name__ == '__main__':
 	else:
 		users = init_users()
 		### STAGE 1 EXECUTE
-		for label in [add_day_info, add_semester_index, add_meal, add_orders, add_avg_order_per_person_aggregate]:
+		for label in [add_day_info, add_semester_index, add_meal, add_orders, add_avg_order_per_person_aggregate]:  
 			print(label) 
 			start_time = time.time()
 			label()
