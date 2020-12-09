@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 # meal (str): mealtime of traunch (breakfast, lunch, dinner)
 # semester(int): numbered 1-7
 # percent_orders_this_semester_same_mealtime (num): percent of orders in semester up to current tranche that were at same mealtime
+# percent_orders_this_semester_same_day_of_week (num): percent of orders in semester up to current tranche that were on the same day of week
 # 
 ###
 
@@ -261,8 +262,9 @@ def add_percent_orders_this_semester_same_mealtime():
 			percent_orders = 0 if tot_orders == 0 else curr_mealtime_orders / tot_orders # TODO: what to return when there haven't been any orders yet?
 			traunch["percent_orders_this_semester_same_mealtime"] = percent_orders
 
-			# update mealtime_counts and tot_orders
+			# update mealtime_counts
 			mealtime_counts[semester][mealtime] += traunch["orders"]
+
 
 # calculates the percentage of orders this semester on the same day of week
 def add_percent_orders_this_semester_same_day_of_week():
@@ -274,6 +276,27 @@ def add_percent_orders_this_semester_same_day_of_week():
 			for day in range(7):
 				day_counts[day] = 0
 			day_counts[sem] = semester_day_counts
+
+		for _, traunch in enumerate(user):
+			semester = traunch["semester"]
+			# skip if not in school semester
+			if semester == -1:
+				continue
+
+			# calculate percent orders and set field in tranche
+			day = traunch["day_of_week"]
+			curr_day_orders = day_counts[semester][day]
+
+			tot_orders = 0		
+			for day in range(7):
+				tot_orders += day_counts[semester][day]
+
+			percent_orders = 0 if tot_orders == 0 else curr_day_orders / tot_orders
+			traunch["percent_orders_this_semester_same_day_of_week"] = percent_orders
+
+			# update day_counts
+			day_counts[semester][day] += traunch["orders"]
+
 
 
 for label in [prev_days, add_percent_orders_this_semester_same_mealtime]:
