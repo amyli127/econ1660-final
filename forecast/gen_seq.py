@@ -336,7 +336,16 @@ def add_weather():
 				traunch['feels_like'] = float(weather_info['feels_like'] or 0)
 				traunch['rain_past_hour'] = float(weather_info['rain_past_hour'] or 0)
 				traunch['snow_past_hour'] = float(weather_info['snow_past_hour'] or 0)
-				
+
+FILTER_DATE = naive_to_est("2018-01-01T04:00:00.0000Z").date()
+
+def filter_traunches():
+	for user_id, user in users.items():
+			bad_traunches = set()
+			for t_idx, traunch in enumerate(user):
+				if traunch['semester'] == -1 or traunch['date'] < FILTER_DATE:
+					bad_traunches.add(t_idx)
+			users[user_id] = [traunch for i, traunch in enumerate(user) if i not in bad_traunches]
 
 ### TRAIN + TEST DATA RENDERING ###
 
@@ -377,7 +386,7 @@ if __name__ == '__main__':
 	else:
 		users = init_users()
 		### STAGE 1 EXECUTE
-		for label in [add_meal, add_day_info, add_orders, add_semester_index, add_avg_order_per_person_aggregate]:  
+		for label in [add_day_info, add_semester_index]:  # add_meal, add_orders, add_avg_order_per_person_aggregate
 			print(label) 
 			start_time = time.time()
 			label()
@@ -393,10 +402,23 @@ if __name__ == '__main__':
 	print("rem --- %s seconds ---" % (time.time() - start_time))
 
 	### STAGE 2 EXECUTE
-	for label in [prev_days, add_weather]:
+	for label in []: # prev_days, add_weather
 		print(label) 
 		start_time = time.time()
 		label()
 		print("--- %s seconds ---" % (time.time() - start_time))
 
-	print(users['5bbd1921fc545d002dc5299e'][:4])
+	### STAGE 3 EXECUTE
+	
+	count = 0
+	for _, user in users.items():
+		count += len(user)
+	print(count)
+
+	filter_traunches()
+
+	count = 0
+	for _, user in users.items():
+		count += len(user)
+	print(count)
+
