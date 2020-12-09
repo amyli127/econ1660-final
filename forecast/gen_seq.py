@@ -166,7 +166,7 @@ def add_semester_index():
 
 ### STAGE 1 EXECUTE
 
-for label in [add_meal, add_day_info, add_orders, add_semester_index]:  
+for label in [add_meal, add_day_info]:  # add_orders, add_semester_index
 	print(label) 
 	start_time = time.time()
 	label()
@@ -218,13 +218,47 @@ def prev_days():
 			traunch['past_7_days'] = past_x(user, t_idx, 7)
 			traunch['past_30_days'] = past_x(user, t_idx, 30)
 
-for label in [prev_days]:
+
+def weather_hour_to_est(dt):
+	naive = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S +0000 UTC")
+
+	# explicitly add utc 
+	#datetime_obj_utc = naive.replace(tzinfo=pytz.timezone('UTC'))
+
+	# convert to eastern
+	return naive.astimezone(pytz.timezone('US/Eastern'))
+
+
+def add_weather():
+	with open(os.getcwd() + '/data/bigfiles/weather.csv', 'rt', newline='') as weather_data:
+		hour_to_info = {}
+		weather_reader = csv.DictReader(weather_data)
+		for hour_entry in weather_reader:
+			weather_datetime = weather_hour_to_est(hour_entry['dt_iso'])
+			hour_to_info[(weather_datetime.date(), weather_datetime.hour)] = {'feels_like': hour_entry['feels_like'], 'rain_past_hour': hour_entry['rain_1h'], 'snow_past_hour': hour_entry['snow_1h']}
+		for _, user in users.items():
+			for _, traunch in enumerate(user):
+				date = traunch['date']
+				meal = traunch['meal']
+				if meal == 'breakfast':
+					weather_info = hour_to_info[(date, 9)]
+				elif meal == 'lunch':
+					weather_info = hour_to_info[(date, 13)]
+				else:
+					weather_info = hour_to_info[(date, 18)]
+				traunch['feels_like'] = float(weather_info['feels_like'] or 0)
+				traunch['rain_past_hour'] = float(weather_info['rain_past_hour'] or 0)
+				traunch['snow_past_hour'] = float(weather_info['snow_past_hour'] or 0)
+				
+
+for label in [add_weather]: # prev_days
 	print(label) 
 	start_time = time.time()
 	label()
 	print("--- %s seconds ---" % (time.time() - start_time))
 
 
+print(users['5bbd1921fc545d002dc5299e'][:4])
 ### TRAIN + TEST DATA RENDERING ###
 
 
