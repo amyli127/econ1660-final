@@ -22,6 +22,7 @@ users = {}
 # date (yyyy-mm-dd):
 # meal (str): mealtime of traunch (breakfast, lunch, dinner)
 # semester(int): numbered 1-7
+# percent_orders_this_semester_same_mealtime (num): percent of orders in semester up to current tranche that were at same mealtime
 # 
 ###
 
@@ -166,6 +167,7 @@ def add_semester_index():
 
 ### STAGE 1 EXECUTE
 
+print("starting stage 1")
 for label in [add_meal, add_day_info, add_orders, add_semester_index]:  
 	print(label) 
 	start_time = time.time()
@@ -218,7 +220,46 @@ def prev_days():
 			traunch['past_7_days'] = past_x(user, t_idx, 7)
 			traunch['past_30_days'] = past_x(user, t_idx, 30)
 
-for label in [prev_days]:
+# calculates the percentage of orders this semester in the same mealtime
+def add_percent_orders_this_semester_same_mealtime():
+	for _, user in users.items():
+		# initialize dict from semester to dict of mealtime to count
+		mealtime_counts = {}
+		for i in range(1, 8):
+			semester_mealtime_counts = {}	
+			for mealtime in MEALTIMES:
+				semester_mealtime_counts[mealtime] = 0
+			mealtime_counts[i] = semester_mealtime_counts
+
+		for _, traunch in enumerate(user):
+			semester = traunch["semester"]
+			# skip if not in school semester
+			if semester == -1:
+				continue
+
+			# calculate percent orders and set field in tranche
+			mealtime = traunch["meal"]
+			curr_mealtime_orders = mealtime_counts[semester][mealtime]
+			tot_orders = mealtime_counts[semester]["breakfast"] + mealtime_counts[semester]["lunch"] + mealtime_counts[semester]["dinner"]
+			percent_orders = 0 if tot_orders == 0 else curr_mealtime_orders / tot_orders # TODO: what to return when there haven't been any orders yet?
+			traunch["percent_orders_this_semester_same_mealtime"] = percent_orders
+
+			# update mealtime_counts and tot_orders
+			mealtime_counts[semester][mealtime] += traunch["orders"]
+
+# calculates the percentage of orders this semester on the same day of week
+def add_percent_orders_this_semester_same_day_of_week():
+	for _, user in users.items():
+		# initialize dict from semester to dict of day of week to count
+		day_counts = {}
+		for sem in range(1, 8):
+			semester_day_counts = {}	
+			for day in range(7):
+				day_counts[day] = 0
+			day_counts[sem] = semester_day_counts
+
+
+for label in [prev_days, add_percent_orders_this_semester_same_mealtime]:
 	print(label) 
 	start_time = time.time()
 	label()
