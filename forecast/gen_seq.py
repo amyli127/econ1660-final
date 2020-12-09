@@ -386,7 +386,7 @@ if __name__ == '__main__':
 	print("rem --- %s seconds ---" % (time.time() - start_time))
 
 	### STAGE 2 EXECUTE
-	for label in [prev_days, add_weather]:
+	for label in [prev_days, add_weather, add_percent_orders_this_semester_same_mealtime, add_percent_orders_this_semester_same_day_of_week]:
 		print(label) 
 		start_time = time.time()
 		label()
