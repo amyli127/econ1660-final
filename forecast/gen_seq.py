@@ -1,32 +1,16 @@
+import argparse
 import csv
+import pickle
 import dateutil.parser
 import os
-from datetime import datetime, timedelta
 import copy
 import time
-
-# use pip3 to install
 import pytz
 
+from datetime import datetime, timedelta
+
+
 ### FEATURE IMPLEMENTATIONS ###
-
-
-# dict of every users to timeline (list of traunch)
-users = {}
-
-### 
-# traunch is a dict containing following features:
-#
-# orders (int): number of orders placed by user in traunch
-# day_of_week (int): day of week (Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun = 6)
-# date (yyyy-mm-dd):
-# meal (str): mealtime of traunch (breakfast, lunch, dinner)
-# semester(int): numbered 1-7
-# 
-###
-
-# initialize traunch fields in template -> not being used due to deepcopy taking up time
-# TEMPLATE = {'orders': 0}
 
 # number of traunches
 TRAUNCH_COUNT = 3500 # start date to ~nov 2020 -> should be ~3500
@@ -44,7 +28,6 @@ def naive_to_est(dt):
 	# convert to eastern
 	return datetime_obj_utc.astimezone(pytz.timezone('US/Eastern'))
 
-
 # datetime obj of first tranche, based on first order at 2017-06-04 19:30:02.279000+00:003
 # update: datetime is set to start of fall 2017 semester
 # note: set to first mealtime of day of first order to make tranche conversion easier
@@ -54,27 +37,7 @@ FIRST_TRANCHE_DATETIME = naive_to_est("2017-09-03T04:00:00.0000Z")
 # dict of meal to list containing start (inclusive) and end (exclusive) hour of meal
 MEALTIMES = {"breakfast": [7, 11], "lunch": [11, 15], "dinner": [15, 21]}
 
-# STAGE 1 - INIT
-with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
-	users_data_reader = csv.DictReader(users_data)
-	with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
-		orders_data_reader = csv.DictReader(orders_data)
-		with open(os.getcwd() + '/data/smallfiles/pvd_stores.txt', "rt", encoding="utf8") as pvd_stores:
-			store_reader = csv.DictReader(pvd_stores)
-			pvd_store_list = []
-			for store in store_reader:
-				pvd_store_list.append(store['_id'])
-			pvd_students = []
-			for order in orders_data_reader:
-				if order['store'] in pvd_store_list:
-					pvd_students.append(order['fromUser'])
-			pvd_students = list(set(pvd_students))
-			start_time = time.time()
-			for user in users_data_reader:
-				if user['_id'] in pvd_students:
-					users[user['_id']] = [{'orders': 0} for _ in range(TRAUNCH_COUNT)] # copy.deepcopy(TEMPLATE)
-			print("init --- %s seconds ---" % (time.time() - start_time))
-
+# HELPER FUNCTIONS
 
 # converts datetime to traunch index 
 def time_to_traunch_index(dt):
@@ -114,6 +77,58 @@ def traunch_index_to_mealtime(idx):
 def traunch_index_to_date(idx):
 	days_since_first_tranche = idx / 3
 	return FIRST_TRANCHE_DATETIME + timedelta(days=days_since_first_tranche)
+
+def is_contiguous(user, cur_ind, prev_ind):
+	prev_ind >= 0 and user[cur_ind]['semester'] == user[prev_ind]['semester']
+
+def gen_id_to_date():
+	id_to_date = {}
+	with open(os.getcwd() + '/data/bigfiles/student_join_date.txt', "rt", encoding="utf8") as join_data:
+		join_reader = csv.DictReader(join_data)
+		for entry in join_reader:
+			id_to_date[entry['_id']] = entry['first_order_date']
+	return id_to_date
+
+
+# STAGE 1
+
+def init_users():
+
+	# dict of every users to timeline (list of traunch)
+	users = {}
+
+	### 
+	# traunch is a dict containing following features:
+	#
+	# orders (int): number of orders placed by user in traunch
+	# day_of_week (int): day of week (Mon = 0, Tue, Wed, Thu, Fri, Sat, Sun = 6)
+	# date (yyyy-mm-dd):
+	# meal (str): mealtime of traunch (breakfast, lunch, dinner)
+	# semester(int): numbered 1-7
+	# 
+	###
+
+	with open(os.getcwd() + '/data/bigfiles/master_users.txt', "rt", encoding="utf8") as users_data:
+		users_data_reader = csv.DictReader(users_data)
+		with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
+			orders_data_reader = csv.DictReader(orders_data)
+			with open(os.getcwd() + '/data/smallfiles/pvd_stores.txt', "rt", encoding="utf8") as pvd_stores:
+				store_reader = csv.DictReader(pvd_stores)
+				pvd_store_list = []
+				for store in store_reader:
+					pvd_store_list.append(store['_id'])
+				pvd_students = []
+				for order in orders_data_reader:
+					if order['store'] in pvd_store_list:
+						pvd_students.append(order['fromUser'])
+				pvd_students = list(set(pvd_students))
+				start_time = time.time()
+				for user in users_data_reader:
+					if user['_id'] in pvd_students:
+						users[user['_id']] = [{'orders': 0} for _ in range(TRAUNCH_COUNT)] # copy.deepcopy(TEMPLATE)
+				print("init --- %s seconds ---" % (time.time() - start_time))
+
+	return users
 
 def add_orders():
 	with open(os.getcwd() + '/data/bigfiles/master_orders.txt', "rt", encoding="utf8") as orders_data:
@@ -164,48 +179,44 @@ def add_semester_index():
 			else:
 				traunch['semester'] = user[i - 1]['semester']
 
-### STAGE 1 EXECUTE
+# must be called before pruning inactive user traunches
+def add_avg_order_per_person_aggregate():
+	id_to_date = gen_id_to_date()
+	vals = []
+	for i in range(TRAUNCH_COUNT):
 
-for label in [add_meal, add_day_of_week, add_orders, add_semester_index]:  
-	print(label) 
-	start_time = time.time()
-	label()
-	print("--- %s seconds ---" % (time.time() - start_time))
+		if i == 0 or not is_contiguous(list(users.values())[0], i, i - 1):
+			vals.append(None)
+			continue
 
+		order_sum, user_count = 0, 0
+		for id_, user in users.items():
+			# check if user has joined
+			user_join_date = id_to_date[id_]
+			join_index = time_to_traunch_index(user_join_date)
+			if join_index > i - 1:
+				continue
+			
+			user_count += 1
+			order_sum += user[i - 1]['orders']
 
-### STAGE  1.5
+		vals.append(order_sum / max(1, user_count))
+
+	for _, user in users.items():
+		for i in range(TRAUNCH_COUNT):
+			user[i]['avg_order_per_person_prev_hour'] = vals[i]
+
+### STAGE 1.5
 
 def remove_prior_traunches():
-	id_to_date = {}
-	with open(os.getcwd() + '/data/bigfiles/student_join_date.txt', "rt", encoding="utf8") as join_data:
-		join_reader = csv.DictReader(join_data)
-		for entry in join_reader:
-			id_to_date[entry['_id']] = entry['first_order_date']
+	id_to_date = gen_id_to_date()
 	for user_id, user in users.items():
 		user_join_date = id_to_date[user_id]
 		first_tranche_idx = time_to_traunch_index(user_join_date)
 		user = user[first_tranche_idx:]
 		users[user_id] = user
 
-start_time = time.time()
-remove_prior_traunches()
-print("rem --- %s seconds ---" % (time.time() - start_time))
-
-
-# print(users['5bbd1921fc545d002dc5299e'][5:200])
-
-
-### STAGE 2 INIT
-
-# map from user_id to a list of their feature maps
-user_model = {}
-
-start_time = time.time()
-for user_id, user in users.items(): 
-	user_model[user_id] = [{} for _ in range(len(user))]
-print("init --- %s seconds ---" % (time.time() - start_time))
-
-### STAGE 2 EXECUTE
+### STAGE 2
 
 def past_x(user, t_idx, curr_sem, days):
 	order_count = 0
@@ -217,7 +228,6 @@ def past_x(user, t_idx, curr_sem, days):
 			return None
 	return order_count
 
-
 def prev_days():
 	for mod_user_id, mod_user in user_model.items():
 		for t_idx, traunch in enumerate(users[mod_user_id]):
@@ -227,17 +237,8 @@ def prev_days():
 			mod_user[t_idx]['past_7_days'] = past_x(users[mod_user_id], t_idx, sem, 7)
 			mod_user[t_idx]['past_30_days'] = past_x(users[mod_user_id], t_idx, sem, 30)
 
-for label in [prev_days]:
-	print(label) 
-	start_time = time.time()
-	label()
-	print("--- %s seconds ---" % (time.time() - start_time))
-
-
-# print(user_model['5bbd1921fc545d002dc5299e'][5:200])
 
 ### TRAIN + TEST DATA RENDERING ###
-
 
 # rows = []
 # features = ['_id', 'user_id']
@@ -264,3 +265,49 @@ for label in [prev_days]:
 # 	sequence_writer.writeheader()
 # 	for row in rows:
 # 		sequence_writer.writerow(row)
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-load1', action='store_true', default=False)
+	args = parser.parse_args()
+
+	if args.load1:
+		with open('seq_cache1' + '.pickle', 'rb') as f:
+			users = pickle.load(f)
+	else:
+		users = init_users()
+		### STAGE 1 EXECUTE
+		for label in [init_users, add_meal, add_day_of_week, add_orders, add_semester_index, add_avg_order_per_person_aggregate]:  
+			print(label) 
+			start_time = time.time()
+			label()
+			print("--- %s seconds ---" % (time.time() - start_time))
+
+		# save users
+		with open('seq_cache1' + '.pickle', 'wb') as f:
+		    pickle.dump(users, f)
+
+	### STAGE 1.5 EXECUTE
+	start_time = time.time()
+	remove_prior_traunches()
+	print("rem --- %s seconds ---" % (time.time() - start_time))
+
+	### STAGE 2 EXECUTE
+	for label in [prev_days]:
+		print(label) 
+		start_time = time.time()
+		label()
+		print("--- %s seconds ---" % (time.time() - start_time))
+
+	# print(user_model['5bbd1921fc545d002dc5299e'][5:200])
+
+
+
+
+
+
+
+
+
+
+
