@@ -140,7 +140,7 @@ def add_orders():
 				if traunch_index >= 0 and traunch_index < len(users[order['fromUser']]):
 					users[order['fromUser']][traunch_index]['orders'] += 1
 
-def add_day_of_week():
+def add_day_info():
 	for _, user in users.items():
 		for i, traunch in enumerate(user):
 			date = traunch_index_to_date(i)
@@ -218,25 +218,60 @@ def remove_prior_traunches():
 
 ### STAGE 2
 
-def past_x(user, t_idx, curr_sem, days):
+def same_semester(user, idx, offset):
+	idx_new = idx - offset
+	return idx_new >= 0 and user[idx]['semester'] == user[idx_new]['semester']
+
+def past_x(user, t_idx, days):
 	order_count = 0
 	for i in range(days * TRANCHES_PER_DAY):
 		offset = i + 1
-		if t_idx - offset >= 0 and user[t_idx - offset]['semester'] == curr_sem:
+		if same_semester(user, t_idx, offset):
 			order_count += user[t_idx - offset]['orders']
 		else:
 			return None
 	return order_count
 
 def prev_days():
-	for mod_user_id, mod_user in user_model.items():
-		for t_idx, traunch in enumerate(users[mod_user_id]):
-			sem = traunch['semester']
-			mod_user[t_idx]['past_24_hrs'] = past_x(users[mod_user_id], t_idx, sem, 1)
-			mod_user[t_idx]['past_3_days'] = past_x(users[mod_user_id], t_idx, sem, 3)
-			mod_user[t_idx]['past_7_days'] = past_x(users[mod_user_id], t_idx, sem, 7)
-			mod_user[t_idx]['past_30_days'] = past_x(users[mod_user_id], t_idx, sem, 30)
+	for _, user in users.items():
+		for t_idx, traunch in enumerate(user):
+			traunch['past_24_hrs'] = past_x(user, t_idx, 1)
+			traunch['past_3_days'] = past_x(user, t_idx, 3)
+			traunch['past_7_days'] = past_x(user, t_idx, 7)
+			traunch['past_30_days'] = past_x(user, t_idx, 30)
 
+
+def weather_hour_to_est(dt):
+	naive = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S +0000 UTC")
+
+	# explicitly add utc 
+	#datetime_obj_utc = naive.replace(tzinfo=pytz.timezone('UTC'))
+
+	# convert to eastern
+	return naive.astimezone(pytz.timezone('US/Eastern'))
+
+
+def add_weather():
+	with open(os.getcwd() + '/data/bigfiles/weather.csv', 'rt', newline='') as weather_data:
+		hour_to_info = {}
+		weather_reader = csv.DictReader(weather_data)
+		for hour_entry in weather_reader:
+			weather_datetime = weather_hour_to_est(hour_entry['dt_iso'])
+			hour_to_info[(weather_datetime.date(), weather_datetime.hour)] = {'feels_like': hour_entry['feels_like'], 'rain_past_hour': hour_entry['rain_1h'], 'snow_past_hour': hour_entry['snow_1h']}
+		for _, user in users.items():
+			for _, traunch in enumerate(user):
+				date = traunch['date']
+				meal = traunch['meal']
+				if meal == 'breakfast':
+					weather_info = hour_to_info[(date, 9)]
+				elif meal == 'lunch':
+					weather_info = hour_to_info[(date, 13)]
+				else:
+					weather_info = hour_to_info[(date, 18)]
+				traunch['feels_like'] = float(weather_info['feels_like'] or 0)
+				traunch['rain_past_hour'] = float(weather_info['rain_past_hour'] or 0)
+				traunch['snow_past_hour'] = float(weather_info['snow_past_hour'] or 0)
+				
 
 ### TRAIN + TEST DATA RENDERING ###
 
@@ -293,21 +328,10 @@ if __name__ == '__main__':
 	print("rem --- %s seconds ---" % (time.time() - start_time))
 
 	### STAGE 2 EXECUTE
-	for label in [prev_days]:
+	for label in [prev_days, add_weather]:
 		print(label) 
 		start_time = time.time()
 		label()
 		print("--- %s seconds ---" % (time.time() - start_time))
 
-	# print(user_model['5bbd1921fc545d002dc5299e'][5:200])
-
-
-
-
-
-
-
-
-
-
-
+	print(users['5bbd1921fc545d002dc5299e'][:4])
