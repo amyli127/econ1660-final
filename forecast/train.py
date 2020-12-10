@@ -12,12 +12,12 @@ def load_data():
 
 	seed = 7
 	test_size = 0.33
-	X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=test_size, random_state=seed)
+	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed)
 
 	return X_train, X_test, y_train, y_test
 
 def train(X_train, y_train, args):
-	model = XGBRegressor(**args)
+	model = XGBRegressor(**vars(args))
 	model.fit(X_train, y_train)
 	return model
 
