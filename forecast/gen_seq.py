@@ -354,9 +354,43 @@ def add_avg_orders_per_week_same_semester_and_total() :
 			semester_counts[semester] += traunch["orders"]
 
 
-# calculates the average number of orders Ver week this semester from the same day of week and same mealtime
+# calculates the average number of orders per week this semester from the same day of week and same mealtime
 def add_avg_orders_same_day_of_week_same_mealtime_same_semester():
-	pass
+	for _, user in users.items():
+		# initialize dict from semester to day of week to meal
+		day_mealtime_counts = {}
+		for i in range(1, 8):
+			semester_day_mealtime_counts = {}
+			for d in range(7):
+				meal_counts = {}
+				for mealtime in MEALTIMES:
+					meal_counts[mealtime] = 0
+				semester_day_mealtime_counts[d] = meal_counts
+			day_mealtime_counts[i] = semester_day_mealtime_counts
+
+		# initialize dict from semester to set of weeks (num representing week of year)
+		semester_weeks = {}
+		for s in range(1, 8):
+			semester_weeks[s] = set()
+
+		for _, traunch in enumerate(user):
+			semester = traunch["semester"]
+			# skip if not in school semester
+			if semester == -1:
+				continue
+
+			# calc and set avg number of orders this semester from the same day of week and same meal per week
+			curr_day_of_week = traunch["day_of_week"]
+			curr_meal = traunch["meal"]
+			tot_orders_same_day_of_week_same_mealtime = day_mealtime_counts[semester][curr_day_of_week][curr_meal]
+			num_weeks_this_semester = len(semester_weeks[semester])
+			avg_orders_same_day_of_week_same_mealtime_same_semester = 0 if num_weeks_this_semester == 0 else tot_orders_same_day_of_week_same_mealtime / num_weeks_this_semester
+			traunch["avg_orders_same_day_of_week_same_mealtile_same_semester"] = avg_orders_same_day_of_week_same_mealtime_same_semester
+
+			# update dicts
+			week = traunch["week_of_year"]
+			semester_weeks[semester].add(week)
+			day_mealtime_counts[semester][curr_day_of_week][curr_meal] += traunch["orders"]
 
 
 def weather_hour_to_est(dt):
