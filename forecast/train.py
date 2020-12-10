@@ -1,13 +1,13 @@
 import argparse
 import os
-from numpy import loadtxt
+from numpy import genfromtxt
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 
 def load_data():
-	data = loadtxt(os.getcwd() + '/data/bigfiles/sequence.txt', delimiter=",")
+	data = genfromtxt(os.getcwd() + '/data/bigfiles/sequence.txt', delimiter=",", skip_header=1)
 	X, y = data[:, 1:], data[:, 0]
 
 	seed = 7
@@ -40,9 +40,10 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-
+	print('loading data')
 	X_train, X_test, y_train, y_test = load_data()
-
+	print('done')
+	print('training model')
 	model = train(X_train, y_train, args)
-
+	print('done')
 	test(model, X_test, y_test)
