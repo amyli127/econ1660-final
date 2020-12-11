@@ -385,7 +385,7 @@ def add_avg_orders_same_day_of_week_same_mealtime_same_semester():
 			tot_orders_same_day_of_week_same_mealtime = day_mealtime_counts[semester][curr_day_of_week][curr_meal]
 			num_weeks_this_semester = len(semester_weeks[semester])
 			avg_orders_same_day_of_week_same_mealtime_same_semester = 0 if num_weeks_this_semester == 0 else tot_orders_same_day_of_week_same_mealtime / num_weeks_this_semester
-			traunch["avg_orders_same_day_of_week_same_mealtile_same_semester"] = avg_orders_same_day_of_week_same_mealtime_same_semester
+			traunch["avg_orders_same_day_of_week_same_mealtime_same_semester"] = avg_orders_same_day_of_week_same_mealtime_same_semester
 
 			# update dicts
 			week = traunch["week_of_year"]
@@ -458,7 +458,7 @@ def filter_features():
 	rows = []
 	features = ['orders', 'day_of_week', 'meal', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days', 'past_7_days', 'past_30_days',
 				"percent_orders_this_semester_same_mealtime", "percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour', 
-				'avg_orders_per_week_this_semester', 'avg_orders_per_week_total']
+				'avg_orders_per_week_this_semester', 'avg_orders_per_week_total', 'avg_orders_same_day_of_week_same_mealtime_same_semester']
 
 	for _, user in users.items():
 		for traunch in user:
@@ -482,7 +482,7 @@ def write_output(rows):
 		 		'breakfast', 'lunch', 'dinner', 'avg_order_per_person_prev_hour', 'past_24_hrs', 'past_3_days',
 				'past_7_days', 'past_30_days', "percent_orders_this_semester_same_mealtime",
 				"percent_orders_this_semester_same_day_of_week", 'feels_like', 'rain_past_hour', 'snow_past_hour',
-				'avg_orders_per_week_this_semester', 'avg_orders_per_week_total']
+				'avg_orders_per_week_this_semester', 'avg_orders_per_week_total', 'avg_orders_same_day_of_week_same_mealtime_same_semester']
 
 
 	with open(os.getcwd() + '/data/bigfiles/sequence.txt', 'w', newline='') as sequence:
